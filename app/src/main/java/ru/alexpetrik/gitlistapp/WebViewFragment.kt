@@ -1,9 +1,6 @@
 package ru.alexpetrik.gitlistapp
 
-import android.accounts.Account
-import android.accounts.AccountManager
 import android.os.Bundle
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
