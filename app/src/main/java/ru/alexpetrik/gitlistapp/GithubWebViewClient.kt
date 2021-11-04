@@ -8,7 +8,9 @@ import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.core.content.edit
 import kotlinx.coroutines.*
+import okhttp3.internal.Util
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.OutputStreamWriter
@@ -17,6 +19,8 @@ import javax.net.ssl.HttpsURLConnection
 
 class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
 
+    var accessToken = ""
+
     override fun shouldOverrideUrlLoading(
         view: WebView?,
         request: WebResourceRequest?
@@ -24,7 +28,7 @@ class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
         if (request?.url.toString().startsWith(BuildConfig.REDIRECT_URL)) {
             handleUrl(request?.url.toString())
 
-            if (request?.url.toString().contains("code"))
+            if (request?.url.toString().contains(Utils.codeField))
                 githubDialog.dismiss()
             return true
         }
@@ -34,16 +38,18 @@ class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
     @DelicateCoroutinesApi
     private fun handleUrl(url: String) {
         val uri = Uri.parse(url)
-        if (url.contains("code")) {
-            val githubCode = uri.getQueryParameter("code") ?: ""
+        if (url.contains(Utils.codeField)) {
+            val githubCode = uri.getQueryParameter(Utils.codeField) ?: ""
             requestForAccessToken(githubCode)
+            githubDialog.context.getSharedPreferences(Utils.accessTokenField, Context.MODE_PRIVATE).edit {
+                putString(Utils.accessTokenField, accessToken)
+            }
         }
     }
 
     @DelicateCoroutinesApi
-    private fun requestForAccessToken(githubCode: String) {
-        val grantType = "authorization_code"
-        val postParams = "grant_type=" + grantType +
+    private fun requestForAccessToken(githubCode: String) : String {
+        val postParams = "grant_type=authorization_code" +
                 "&code=" + githubCode +
                 "&redirect_uri=" + BuildConfig.REDIRECT_URL +
                 "&client_id=" + BuildConfig.CLIENT_ID +
@@ -69,12 +75,11 @@ class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
             withContext(Dispatchers.Main) {
                 val jsonObject = JSONTokener(response).nextValue() as JSONObject
 
-                val accessToken = jsonObject.getString("access_token")
-
-                fetchGithubUserProfile(accessToken)
+                accessToken = jsonObject.getString(Utils.accessTokenField)
+//                fetchGithubUserProfile(accessToken)
             }
         }
-
+        return accessToken
     }
 
     @DelicateCoroutinesApi
