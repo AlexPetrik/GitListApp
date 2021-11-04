@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
+import android.widget.EditText
 import java.net.URL
 import java.sql.Time
 import java.util.concurrent.TimeUnit
@@ -34,12 +35,15 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val login = view.findViewById<EditText>(R.id.editTextTextPersonName)
+
         val loginButton = view.findViewById<Button>(R.id.login_button)
         loginButton.setOnClickListener {
             val state = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())
 
             val githubAuthUrl = BuildConfig.AUTHORIZE_URL +
                     "?client_id=" + BuildConfig.CLIENT_ID +
+                    "&login=" + login.text +
                     "&scope=" + "read:user,user:email" +
                     "&redirect_uri=" + BuildConfig.REDIRECT_URL +
                     "&state=" + state
