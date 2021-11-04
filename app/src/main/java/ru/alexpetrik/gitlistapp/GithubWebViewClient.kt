@@ -2,15 +2,12 @@ package ru.alexpetrik.gitlistapp
 
 import android.app.Dialog
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.Uri
-import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.edit
 import kotlinx.coroutines.*
-import okhttp3.internal.Util
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.OutputStreamWriter
@@ -18,8 +15,6 @@ import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
 class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
-
-    var accessToken = ""
 
     override fun shouldOverrideUrlLoading(
         view: WebView?,
@@ -41,14 +36,11 @@ class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
         if (url.contains(Utils.codeField)) {
             val githubCode = uri.getQueryParameter(Utils.codeField) ?: ""
             requestForAccessToken(githubCode)
-            githubDialog.context.getSharedPreferences(Utils.accessTokenField, Context.MODE_PRIVATE).edit {
-                putString(Utils.accessTokenField, accessToken)
-            }
         }
     }
 
     @DelicateCoroutinesApi
-    private fun requestForAccessToken(githubCode: String) : String {
+    private fun requestForAccessToken(githubCode: String) {
         val postParams = "grant_type=authorization_code" +
                 "&code=" + githubCode +
                 "&redirect_uri=" + BuildConfig.REDIRECT_URL +
@@ -72,50 +64,13 @@ class GithubWebViewClient(private val githubDialog: Dialog) : WebViewClient() {
             }
             val response = httpsURLConnection.inputStream.bufferedReader()
                 .use { it.readText() }
-            withContext(Dispatchers.Main) {
-                val jsonObject = JSONTokener(response).nextValue() as JSONObject
 
-                accessToken = jsonObject.getString(Utils.accessTokenField)
-//                fetchGithubUserProfile(accessToken)
-            }
-        }
-        return accessToken
-    }
-
-    @DelicateCoroutinesApi
-    fun fetchGithubUserProfile(token: String) {
-        GlobalScope.launch(Dispatchers.Default) {
-            val tokenURLFull =
-                "https://api.github.com/user"
-
-            val url = URL(tokenURLFull)
-            val httpsURLConnection =
-                withContext(Dispatchers.IO) { url.openConnection() as HttpsURLConnection }
-            httpsURLConnection.requestMethod = "GET"
-            httpsURLConnection.setRequestProperty("Authorization", "Bearer $token")
-            httpsURLConnection.doInput = true
-            httpsURLConnection.doOutput = false
-            val response = httpsURLConnection.inputStream.bufferedReader()
-                .use { it.readText() }
             val jsonObject = JSONTokener(response).nextValue() as JSONObject
-            Log.i("GitHub Access Token: ", token)
 
-            // GitHub Id
-            val githubId = jsonObject.getInt("id")
-            Log.i("GitHub Id: ", githubId.toString())
-
-            // GitHub Display Name
-            val githubDisplayName = jsonObject.getString("login")
-            Log.i("GitHub Display Name: ", githubDisplayName)
-
-            // GitHub Email
-            val githubEmail = jsonObject.getString("email")
-            Log.i("GitHub Email: ", githubEmail)
-
-            // GitHub Profile Avatar URL
-            val githubAvatarURL = jsonObject.getString("avatar_url")
-            Log.i("Github Profile Avatar URL: ", githubAvatarURL)
-
+            val accessToken = jsonObject.getString(Utils.accessTokenField)
+            githubDialog.context.getSharedPreferences(Utils.accessTokenField, Context.MODE_PRIVATE).edit {
+                putString(Utils.accessTokenField, accessToken)
+            }
         }
     }
 }
